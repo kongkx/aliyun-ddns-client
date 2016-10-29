@@ -22,7 +22,7 @@ from helper import DDNSHelper
 from utils import DDNSUtils
 from config import DDNSConfig
 
-CONF_FILE = "/etc/ddns.conf"
+CONF_FILE = "./ddns.conf"
 
 if __name__ == "__main__":
     config = DDNSConfig(CONF_FILE)
@@ -63,10 +63,3 @@ if __name__ == "__main__":
         if config.debug:
             DDNSUtils.info("No changes,skipped...")
             continue
-
-
-
-
-
-
-

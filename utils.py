@@ -17,9 +17,9 @@
  along with this program; if not, write to the Free Software
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 """
-import requests
 import socket
 import sys
+from urllib2 import Request, urlopen, URLError
 from datetime import datetime
 
 class DDNSUtils:
@@ -47,17 +47,17 @@ class DDNSUtils:
         """
         ip = None
         try:
-            r = requests.get("http://members.3322.org/dyndns/getip")
-            if r.status_code == requests.codes.ok:
-                ip = r.content.rstrip("\n")
-            else:
-                if self.debug:
-                    self.info("Http Status Code:{0}\n{1}".format(r.status_code, r.content))
-                else:
-                    self.err("Failed to get current public IP, pls check network settings")
-        except Exception,e:
-            self.err("network problem:{0}".format(e))
-
+            r = urlopen("http://members.3322.org/dyndns/getip")
+            ip = r.read().rstrip("\n")
+        except URLError as e:
+            if hasattr(e, 'reason'):
+                print 'We failed to reach a server.'
+                print 'Reason: ', e.reason
+            elif hasattr(e, 'code'):
+                print 'The server couldn\'t fulfill the request.'
+                print 'Error code: ', e.code
+                print e.read()
+        # return '192.168.1.1'
         return ip
 
     def getCurrenDNSResolvedIP(self, domainName, subDomainName):
@@ -76,9 +76,3 @@ class DDNSUtils:
     @staticmethod
     def getCurrentTime():
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
-
-
-
-

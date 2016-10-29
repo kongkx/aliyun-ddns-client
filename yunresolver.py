@@ -17,12 +17,13 @@
  along with this program; if not, write to the Free Software
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 """
-import requests
+# import requests
 import string
 import urllib
 import hashlib
 import hmac
 import uuid
+from urllib2 import Request, urlopen, URLError
 from datetime import datetime
 
 class DomainRecord(object):
@@ -153,11 +154,17 @@ class YunResolver(object):
         # do real http action
         jsonResult = None
         try:
-            r = requests.get(self.url, params=params)
-            if r.status_code == requests.codes.ok:
-                jsonResult = r.json()
-        except Exception,e:
-            print r.content
+            url = self.url + "?" + urllib.urlencode(params)
+            r = urlopen(url);
+            jsonResult = json.loads(r.read());
+        except URLError as e:
+            if hasattr(e, 'reason'):
+                print 'We failed to reach a server.'
+                print 'Reason: ', e.reason
+            elif hasattr(e, 'code'):
+                print 'The server couldn\'t fulfill the request.'
+                print 'Error code: ', e.code
+                print e.read()
             raise e
 
         if not jsonResult:
@@ -213,12 +220,16 @@ class YunResolver(object):
 
         # do real http action
         try:
-            r = requests.get(self.url, params=params)
-            if r.status_code != requests.codes.ok:
-                print "Http Status Code:%s\n%s" % (r.status_code, r.content)
-                return False
-        except Exception,e:
-            print r.content
+            url = self.url + "?" + urllib.urlencode(params)
+            r = urlopen(url);
+        except URLError as e:
+            if hasattr(e, 'reason'):
+                print 'We failed to reach a server.'
+                print 'Reason: ', e.reason
+            elif hasattr(e, 'code'):
+                print 'The server couldn\'t fulfill the request.'
+                print 'Error code: ', e.code
+                print e.read()
             raise e
 
         return True
@@ -235,24 +246,17 @@ class YunResolver(object):
         # do real http action
         jsonResult = None
         try:
-            r = requests.get(self.url, params=params)
-            if r.status_code != requests.codes.ok:
-                print "Http Status Code:%s\n%s" % (r.status_code, r.content)
-                return False
-
-            jsonResult = r.json()
-        except Exception,e:
-            print r.content
+            url = self.url + "?" + urllib.urlencode(params)
+            r = urlopen(url);
+            jsonResult = json.loads(r.read());
+        except URLError as e:
+            if hasattr(e, 'reason'):
+                print 'We failed to reach a server.'
+                print 'Reason: ', e.reason
+            elif hasattr(e, 'code'):
+                print 'The server couldn\'t fulfill the request.'
+                print 'Error code: ', e.code
+                print e.read()
             raise e
 
         return jsonResult
-
-
-
-
-
-
-
-
-
-
