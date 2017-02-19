@@ -23,6 +23,7 @@ import urllib
 import hashlib
 import hmac
 import uuid
+import json
 from urllib2 import Request, urlopen, URLError
 from datetime import datetime
 
@@ -173,6 +174,9 @@ class YunResolver(object):
 
         domainRecordList = []
         try:
+            if jsonResult['TotalCount'] == 0:
+                return None
+
             records = jsonResult['DomainRecords']['Record']
             for rec in records:
                 #dr = DomainRecord(rec)
@@ -181,6 +185,59 @@ class YunResolver(object):
             raise e
 
         return domainRecordList
+
+    def addDomainRecord(self, domainName, rr, type="A", value="192.168.0.1",
+                        ttl=None, priority=None, line=None):
+        httpMethod = "GET"
+        params = {
+            'Action': "AddDomainRecord",
+            'DomainName': domainName,
+            'RR': rr,
+            'type': type,
+            'Value': value
+        }
+
+        optionalParams = {}
+        if ttl:
+            validTTLs = [600, 1800, 3600, 43200, 86400]
+            if ttl not in validTTLs:
+                print "TTL is not a valid value, it need to be one of them: %s" % validTTLs
+                return False
+            optionalParams['TTL'] = ttl
+
+        if priority:
+            validPriorities = range(1,11)
+            if priority not in validPriorities:
+                print "Priority is not a valid value, it need to be one of them: %s" % validPriorities
+            optionalParams['Priority'] = priority
+
+        if line:
+            validLines = ['default', 'telecom', 'unicom', 'mobile', 'oversea', 'edu', 'google', 'baidu', 'biying']
+            if line not in validLines:
+                print "Line is not a valid value, it need to be one of them: %s" % validLines
+                return False
+            optionalParams['Line']= line
+
+        params.update(optionalParams)
+        # add signature
+        params.update({"Signature": self.getSignature(httpMethod, params)})
+
+        # do real http action
+        try:
+            url = self.url + "?" + urllib.urlencode(params)
+            r = urlopen(url);
+            jsonResult = json.loads(r.read());
+        except URLError as e:
+            if hasattr(e, 'reason'):
+                print 'We failed to reach a server.'
+                print 'Reason: ', e.reason
+            elif hasattr(e, 'code'):
+                print 'The server couldn\'t fulfill the request.'
+                print 'Error code: ', e.code
+                print e.read()
+            raise e
+
+        return jsonResult
 
     def updateDomainRecord(self, recordId, rr="www", type="A", value="192.168.0.1",
                            ttl=None, priority=None, line=None):

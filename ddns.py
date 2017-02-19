@@ -37,27 +37,18 @@ if __name__ == "__main__":
         DDNSUtils.err_and_exit("Failed to get current public ip")
 
     for localRecord in config.localDomainRecordList:
-        # if we don't have domain record's id in config file, then we never sync to server before
-        if not localRecord.id or not localRecord.value:
-            result = helper.syncFirstTime(localRecord,currentPublicIP)
-            if result is False:
-                DDNSUtils.err_and_exit("Failed doing the first time sync for record:{0}".format(localRecord.alias))
-                continue
+        # try to sync all record,
+        if config.debug:
+            DDNSUtils.info("current public ip is:{0}, cached ip is:{1}".format(currentPublicIP, localRecord.value))
 
-            DDNSUtils.info("Successfully sync done for record:{0}".format(localRecord.alias))
+        result = helper.sync(localRecord, currentPublicIP);
+
+        if result is False:
+            DDNSUtils.err_and_exit("Failed doing the first time sync for record:{0}".format(localRecord.alias))
             continue
 
-        # if current public ip is not the same as the one in server
-        if currentPublicIP != localRecord.value:
-            if config.debug:
-                DDNSUtils.info("current public ip is:{0}, server ip is:{1}".format(currentPublicIP, localRecord.value))
-
-            result = helper.sync(localRecord, currentPublicIP)
-            if result is False:
-                DDNSUtils.err_and_exit("Failed to sync the current public IP for record:{0}".format(localRecord.alias))
-
-            DDNSUtils.info("Successfully sync done on:{0}".format(utils.getCurrentTime()))
-            sys.exit(0)
+        DDNSUtils.info("Successfully sync done for record:{0}".format(localRecord.alias))
+        continue
 
         # all done for one record
         if config.debug:

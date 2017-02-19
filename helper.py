@@ -74,7 +74,7 @@ class DDNSHelper(object):
 
         return value
 
-    def sync(self, localRecord, currentPublicIP):
+    def updateDomainRecord(self, localRecord, currentPublicIP):
         if not localRecord.id:
             DDNSUtils.err("You must specify domain record id.")
             return False
@@ -96,12 +96,36 @@ class DDNSHelper(object):
 
         return result
 
-    def syncFirstTime(self, localRecord, currentPublicIP):
+    def addDomainRecord(self, localRecord, currentPublicIP):
+        if not localRecord.subDomain:
+            DDNSUtils.err("You must specify subdomain name.")
+            return False
+
+        if not currentPublicIP:
+            DDNSUtils.err("Current public ip is empty.")
+            return False
+
+        # TODO
+        addResult = self.resolver.addDomainRecord(localRecord.domain, rr=localRecord.subDomain, value=currentPublicIP)
+
+        if not addResult:
+            DDNSUtils.err("Failed to add domain record")
+            return False
+
+        if not self.config.save(localRecord.alias, "id", addResult['RecordId']):
+            DDNSUtils.err("Failed to save domain record id to config file")
+            return False
+
+        if not self.config.save(localRecord.alias, "value", currentPublicIP):
+            DDNSUtils.err("Failed to save domain record value to config file")
+            return False
+
+        return True
+
+    def sync(self, localRecord, currentPublicIP):
         remoteRecord = self.matchRemoteDomainRecord(localRecord.domain, localRecord.subDomain, localRecord.type)
         if not remoteRecord:
-            DDNSUtils.err("Failed to match remote domain record for {0}.{1}"
-                          "".format(localRecord.subDomain, localRecord.domain))
-            return False
+            return self.addDomainRecord(localRecord, currentPublicIP)
 
         remoteRecordId = self.extractDomainRecordId(remoteRecord)
         if not remoteRecordId:
@@ -118,15 +142,18 @@ class DDNSHelper(object):
             DDNSUtils.err("Failed to extract domain value from remote domain record desc")
             return False
 
+        # check whether to update the remote record or just update current profile;
+        if currentPublicIP == remoteRecordValue and currentPublicIP != localRecord.value:
+            # sync local record
+            if not self.config.save(localRecord.alias, "value", currentPublicIP):
+                DDNSUtils.err("Failed to save domain record value to config file")
+                return False
+            return True;
+
         # Now, check if domain record value is different with current public ip or not
-        if currentPublicIP != remoteRecordValue or currentPublicIP != localRecord.value:
-            return self.sync(localRecord, currentPublicIP)
+        if currentPublicIP != remoteRecordValue:
+            return self.updateDomainRecord(localRecord, currentPublicIP)
 
         if self.config.debug:
             DDNSUtils.info("No change with domain record value on remote server, skip it...")
         return True
-
-
-
-
-
